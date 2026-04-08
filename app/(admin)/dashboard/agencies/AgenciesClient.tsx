@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Table,
@@ -113,13 +112,15 @@ export function AgenciesClient({ agencies: initialAgencies }: Props) {
           <p className="text-sm text-[#6B7280] mt-0.5">전체 {agencies.length}개 기관</p>
         </div>
 
+        <Button
+          className="bg-[#1E3A5F] hover:bg-[#1E3A5F]/90 text-white"
+          onClick={() => setCreateOpen(true)}
+        >
+          <Plus className="h-4 w-4 mr-1.5" />
+          기관 추가
+        </Button>
+
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#1E3A5F] hover:bg-[#1E3A5F]/90 text-white">
-              <Plus className="h-4 w-4 mr-1.5" />
-              기관 추가
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>새 검증기관 등록</DialogTitle>

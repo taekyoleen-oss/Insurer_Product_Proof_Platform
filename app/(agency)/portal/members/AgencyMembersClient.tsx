@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { AgencyAvatar } from '@/components/shared/AgencyAvatar'
 import { Badge } from '@/components/ui/badge'
@@ -75,13 +74,12 @@ export function AgencyMembersClient({ members: initialMembers, agencyId, current
           <p className="text-sm text-[#6B7280] mt-0.5">기관 담당자를 관리합니다.</p>
         </div>
 
+        <Button className="bg-[#1E3A5F] hover:bg-[#1E3A5F]/90 text-white" onClick={() => setOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-1.5" />
+          멤버 초대
+        </Button>
+
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#1E3A5F] hover:bg-[#1E3A5F]/90 text-white">
-              <UserPlus className="h-4 w-4 mr-1.5" />
-              멤버 초대
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>멤버 초대</DialogTitle>

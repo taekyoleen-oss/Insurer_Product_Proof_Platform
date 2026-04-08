@@ -32,10 +32,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* 모바일 햄버거 */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center gap-3 bg-[#1E3A5F] px-4 py-3">
         <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-              <Menu className="h-5 w-5" />
-            </Button>
+          <SheetTrigger render={<Button variant="ghost" size="icon" className="text-white hover:bg-white/10" />}>
+            <Menu className="h-5 w-5" />
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-60 border-0">
             <AdminSidebar isSuperAdmin={isSuperAdmin} userName={member.name} />

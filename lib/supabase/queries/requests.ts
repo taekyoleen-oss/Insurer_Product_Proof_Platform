@@ -44,18 +44,18 @@ export async function getRequestsForAdmin(
 
 // ─── 기관용 건 목록 (draft 제외) ──────────────────────────────────────────
 
-export async function getRequestsForAgency(agencyId: string): Promise<Request[]> {
+export async function getRequestsForAgency(agencyId: string): Promise<RequestWithAgency[]> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('ippp_requests')
-    .select('*')
+    .select('*, agency:ippp_agencies(id, name, is_active)')
     .eq('agency_id', agencyId)
     .neq('status', 'draft')
     .order('created_at', { ascending: false })
 
   if (error) throw error
-  return (data ?? []) as Request[]
+  return (data ?? []) as unknown as RequestWithAgency[]
 }
 
 // ─── 단건 상세 ──────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -52,5 +52,17 @@ export default function AuthCallbackPage() {
         <p className="text-sm text-[#6B7280]">인증 처리 중...</p>
       </div>
     </div>
+  )
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full mx-auto" />
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   )
 }

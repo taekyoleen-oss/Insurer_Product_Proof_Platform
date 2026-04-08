@@ -42,11 +42,11 @@ export default async function RequestsPage({
           <h1 className="text-xl font-bold text-[#1E3A5F]">검증 건 목록</h1>
           <p className="text-sm text-[#6B7280] mt-0.5">전체 {requests.length}건</p>
         </div>
-        <Button asChild className="bg-[#1E3A5F] hover:bg-[#1E3A5F]/90 text-white">
-          <Link href="/dashboard/requests/new">
+        <Link href="/dashboard/requests/new">
+          <Button className="bg-[#1E3A5F] hover:bg-[#1E3A5F]/90 text-white">
             <Plus className="h-4 w-4 mr-1.5" />새 검증 건
-          </Link>
-        </Button>
+          </Button>
+        </Link>
       </div>
 
       <FilterBar agencies={agencies ?? []} showStatus showFiscalYear />

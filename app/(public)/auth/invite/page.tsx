@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ interface InvitationData {
   expires_at: string
 }
 
-export default function InvitePage() {
+function InvitePageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get('token')
@@ -230,5 +230,17 @@ export default function InvitePage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="text-[#6B7280]">초대 링크 확인 중...</div>
+      </div>
+    }>
+      <InvitePageContent />
+    </Suspense>
   )
 }

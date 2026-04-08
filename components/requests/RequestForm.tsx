@@ -124,7 +124,7 @@ export function RequestForm({ agencies, initialData, mode = 'create' }: RequestF
 
         <div className="space-y-2">
           <Label htmlFor="agency_id">배정 기관 *</Label>
-          <Select name="agency_id" value={agencyId} onValueChange={setAgencyId} required>
+          <Select name="agency_id" value={agencyId} onValueChange={(v) => setAgencyId(v ?? '')} required>
             <SelectTrigger>
               <SelectValue placeholder="기관을 선택하세요" />
             </SelectTrigger>
@@ -177,7 +177,7 @@ export function RequestForm({ agencies, initialData, mode = 'create' }: RequestF
           <Select
             name="product_type"
             value={productType}
-            onValueChange={setProductType}
+            onValueChange={(v) => setProductType(v ?? '')}
             required={type === 'product'}
           >
             <SelectTrigger>

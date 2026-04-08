@@ -112,7 +112,6 @@ interface FileGroup {
 
 export function FileVersionHistory({
   files,
-  requestId: _requestId,
   currentUserId,
   isAdmin = false,
   onDeleted,

@@ -41,7 +41,7 @@ interface AgencySidebarProps {
   agencyName?: string
 }
 
-export function AgencySidebar({ isAgencyAdmin = false, userName, agencyName: _agencyName }: AgencySidebarProps) {
+export function AgencySidebar({ isAgencyAdmin = false, userName }: AgencySidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
 

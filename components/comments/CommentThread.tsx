@@ -219,7 +219,7 @@ export function CommentThread({
           <div className="flex items-center gap-2 rounded-md bg-blue-50 border border-blue-100 px-3 py-1.5 text-xs text-blue-700">
             <CornerDownRight className="h-3 w-3 shrink-0" />
             <span className="truncate flex-1">
-              답글: "{replyTarget.content.slice(0, 40)}..."
+              답글: &ldquo;{replyTarget.content.slice(0, 40)}&rdquo;...
             </span>
             <button
               type="button"

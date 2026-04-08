@@ -38,7 +38,7 @@ export async function inviteUserAction(
   role: string,
   agencyId?: string
 ) {
-  const { supabase } = await requireAdmin()
+  await requireAdmin()
 
   // Route Handler를 통해 초대 처리 (Resend 발송 포함)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'

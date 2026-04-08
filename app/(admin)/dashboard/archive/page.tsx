@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
-import { Download, Archive } from 'lucide-react'
+import { Archive } from 'lucide-react'
 import type { ArchiveFilters, RequestStatus } from '@/types'
 
 interface SearchParams {

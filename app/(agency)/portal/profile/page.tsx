@@ -23,7 +23,7 @@ export default function AgencyProfilePage() {
   const [phone, setPhone] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const [currentPassword, setCurrentPassword] = useState('')
+  const [_currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [changingPw, setChangingPw] = useState(false)

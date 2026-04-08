@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // 알림 유형별 수신자 결정 및 템플릿 데이터 준비
     let recipientEmails: string[] = []
-    let finalTemplateData: Record<string, string> = {
+    const finalTemplateData: Record<string, string> = {
       title,
       requestUrl: `${appUrl}/dashboard/requests/${request_id}`,
       ...template_data,

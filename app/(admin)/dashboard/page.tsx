@@ -1,9 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
 import { getKpiForAdmin, getRequestsForAdmin } from '@/lib/supabase/queries/requests'
 import { KPICard } from '@/components/shared/KPICard'
 import { RequestCard } from '@/components/requests/RequestCard'
 import { AgencyAvatar } from '@/components/shared/AgencyAvatar'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   FileCheck,
   CheckCircle2,

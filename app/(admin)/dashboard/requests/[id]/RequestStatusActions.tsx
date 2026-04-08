@@ -3,14 +3,8 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { updateRequestStatus, completeRequest } from '@/lib/actions/requests'
-import { CheckCircle2, ChevronDown, PauseCircle, Play, ArrowRight } from 'lucide-react'
+import { CheckCircle2, PauseCircle, Play, ArrowRight } from 'lucide-react'
 import type { RequestStatus } from '@/types'
 
 interface RequestStatusActionsProps {

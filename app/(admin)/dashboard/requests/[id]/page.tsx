@@ -9,7 +9,7 @@ import { CommentThread } from '@/components/comments/CommentThread'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { DeadlineCountdown } from '@/components/shared/DeadlineCountdown'
 import { AgencyAvatar } from '@/components/shared/AgencyAvatar'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { RequestStatusActions } from './RequestStatusActions'
 import { Calendar, Building2, Tag } from 'lucide-react'
@@ -32,7 +32,7 @@ export default async function AdminRequestDetailPage({
 
   if (!request) notFound()
 
-  const { data: member } = await supabase
+  await supabase
     .from('ippp_internal_members')
     .select('name, internal_role')
     .eq('user_id', user.id)

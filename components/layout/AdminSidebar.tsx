@@ -67,8 +67,8 @@ export function AdminSidebar({ isSuperAdmin = false, userName }: AdminSidebarPro
           <ShieldCheck className="h-5 w-5" />
         </div>
         <div>
-          <p className="font-bold text-sm leading-tight">IPPP</p>
-          <p className="text-[10px] text-white/50 leading-tight">Insurer Product Proof Platform</p>
+          <p className="font-bold text-sm leading-tight">보험상품 검증 플랫폼</p>
+          <p className="text-[10px] text-white/50 leading-tight">IPPP</p>
         </div>
       </div>
 

@@ -42,6 +42,58 @@ export async function getRequestsForAdmin(
   return (data ?? []) as unknown as RequestWithAgency[]
 }
 
+// ─── 대시보드 팝업용 조회 ────────────────────────────────────────────────
+
+export async function getActiveRequestsForPopup(): Promise<RequestWithAgency[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('ippp_requests')
+    .select('*, agency:ippp_agencies(id, name, is_active)')
+    .in('status', ['in_progress', 'hold'])
+    .order('due_date', { ascending: true, nullsFirst: false })
+
+  if (error) throw error
+  return (data ?? []) as unknown as RequestWithAgency[]
+}
+
+export async function getDueSoonRequestsForPopup(): Promise<RequestWithAgency[]> {
+  const supabase = await createClient()
+
+  const today = new Date().toISOString().split('T')[0]
+  const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0]
+
+  const { data, error } = await supabase
+    .from('ippp_requests')
+    .select('*, agency:ippp_agencies(id, name, is_active)')
+    .neq('status', 'completed')
+    .gte('due_date', today)
+    .lte('due_date', sevenDaysLater)
+    .order('due_date', { ascending: true })
+
+  if (error) throw error
+  return (data ?? []) as unknown as RequestWithAgency[]
+}
+
+export async function getCompletedThisMonthForPopup(): Promise<RequestWithAgency[]> {
+  const supabase = await createClient()
+
+  const now = new Date()
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+  const { data, error } = await supabase
+    .from('ippp_requests')
+    .select('*, agency:ippp_agencies(id, name, is_active)')
+    .eq('status', 'completed')
+    .gte('archive_at', firstDayOfMonth)
+    .order('archive_at', { ascending: false })
+
+  if (error) throw error
+  return (data ?? []) as unknown as RequestWithAgency[]
+}
+
 // ─── 기관용 건 목록 (draft 제외) ──────────────────────────────────────────
 
 export async function getRequestsForAgency(agencyId: string): Promise<RequestWithAgency[]> {

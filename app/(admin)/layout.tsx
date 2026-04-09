@@ -39,7 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <AdminSidebar isSuperAdmin={isSuperAdmin} userName={member.name} />
           </SheetContent>
         </Sheet>
-        <span className="font-bold text-white text-sm">IPPP — Insurer Product Proof Platform</span>
+        <span className="font-bold text-white text-sm">보험상품 검증 플랫폼</span>
       </div>
 
       {/* 메인 컨텐츠 */}

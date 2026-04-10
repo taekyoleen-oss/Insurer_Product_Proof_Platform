@@ -3,6 +3,7 @@ import { getArchive } from '@/lib/supabase/queries/requests'
 import { FilterBar } from '@/components/requests/FilterBar'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { AgencyAvatar } from '@/components/shared/AgencyAvatar'
+import { ArchiveStatsCharts } from '@/components/dashboard/ArchiveStatsCharts'
 import {
   Table,
   TableBody,
@@ -52,6 +53,8 @@ export default async function ArchivePage({
 
       <FilterBar agencies={agencies ?? []} showStatus={false} showFiscalYear />
 
+      <ArchiveStatsCharts requests={requests} />
+
       <Card className="border-[#E5E7EB]">
         <CardContent className="p-0">
           {requests.length === 0 ? (
@@ -59,7 +62,8 @@ export default async function ArchivePage({
               검색 조건에 맞는 아카이브가 없습니다.
             </div>
           ) : (
-            <Table>
+            <div className="overflow-x-auto">
+          <Table>
               <TableHeader className="bg-gray-50">
                 <TableRow>
                   <TableHead>제목</TableHead>
@@ -94,6 +98,7 @@ export default async function ArchivePage({
                 ))}
               </TableBody>
             </Table>
+          </div>
           )}
         </CardContent>
       </Card>

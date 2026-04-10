@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { getReportForAdmin } from '@/lib/supabase/queries/requests'
 import { AgencyPerformanceTable } from '@/components/dashboard/AgencyPerformanceTable'
+import { ReportCharts } from '@/components/dashboard/ReportCharts'
 import { ReportPeriodSelector } from '@/components/dashboard/ReportPeriodSelector'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { ReportPeriod } from '@/types'
@@ -19,9 +20,14 @@ function resolveReportPeriod(params: SearchParams): ReportPeriod {
   return { type }
 }
 
-async function ReportTable({ period }: { period: ReportPeriod }) {
+async function ReportContent({ period }: { period: ReportPeriod }) {
   const data = await getReportForAdmin(period)
-  return <AgencyPerformanceTable data={data} />
+  return (
+    <div className="space-y-4">
+      <ReportCharts data={data} />
+      <AgencyPerformanceTable data={data} />
+    </div>
+  )
 }
 
 export default async function AdminReportPage({
@@ -42,7 +48,7 @@ export default async function AdminReportPage({
       <ReportPeriodSelector />
 
       <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-        <ReportTable period={period} />
+        <ReportContent period={period} />
       </Suspense>
     </div>
   )

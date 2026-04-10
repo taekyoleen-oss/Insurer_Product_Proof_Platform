@@ -73,8 +73,8 @@ export function AgencyPerformanceTable({ data }: AgencyPerformanceTableProps) {
   }
 
   return (
-    <div className="rounded-lg border border-[#E5E7EB] overflow-hidden">
-      <Table>
+    <div className="rounded-lg border border-[#E5E7EB] overflow-x-auto">
+      <Table className="min-w-[600px]">
         <TableHeader className="bg-gray-50">
           <TableRow>
             <TableHead><SortButton col="agency_name" label="기관명" /></TableHead>

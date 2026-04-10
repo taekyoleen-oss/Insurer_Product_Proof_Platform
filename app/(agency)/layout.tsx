@@ -1,9 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AgencySidebar } from '@/components/layout/AgencySidebar'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Menu } from 'lucide-react'
+import { AgencyContentShell } from '@/components/layout/AgencyContentShell'
 
 export default async function AgencyLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -39,29 +37,14 @@ export default async function AgencyLayout({ children }: { children: React.React
         />
       </div>
 
-      {/* 모바일 햄버거 */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center gap-3 bg-[#1E3A5F] px-4 py-3">
-        <Sheet>
-          <SheetTrigger render={<Button variant="ghost" size="icon" className="text-white hover:bg-white/10" />}>
-            <Menu className="h-5 w-5" />
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-60 border-0">
-            <AgencySidebar
-              isAgencyAdmin={isAgencyAdmin}
-              userName={member.name}
-              agencyName={agency?.name}
-            />
-          </SheetContent>
-        </Sheet>
-        <span className="font-bold text-white text-sm">IPPP — 기관 포털</span>
-      </div>
-
-      {/* 메인 컨텐츠 */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-[1280px] mx-auto px-6 py-6 pt-16 lg:pt-6">
-          {children}
-        </div>
-      </main>
+      {/* 모바일 push 사이드바 + 메인 컨텐츠 */}
+      <AgencyContentShell
+        isAgencyAdmin={isAgencyAdmin}
+        userName={member.name}
+        agencyName={agency?.name}
+      >
+        {children}
+      </AgencyContentShell>
     </div>
   )
 }

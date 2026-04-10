@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ippp-v1'
+const CACHE_NAME = 'ippp-v2'
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

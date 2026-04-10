@@ -37,7 +37,7 @@ export default async function AgencyLayout({ children }: { children: React.React
         />
       </div>
 
-      {/* 모바일 push 사이드바 + 메인 컨텐츠 */}
+      {/* 모바일 사이드바 + 메인 컨텐츠 */}
       <AgencyContentShell
         isAgencyAdmin={isAgencyAdmin}
         userName={member.name}

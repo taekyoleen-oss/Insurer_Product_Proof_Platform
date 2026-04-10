@@ -27,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <AdminSidebar isSuperAdmin={isSuperAdmin} userName={member.name} />
       </div>
 
-      {/* 모바일 push 사이드바 + 메인 컨텐츠 */}
+      {/* 모바일 사이드바 + 메인 컨텐츠 */}
       <AdminContentShell isSuperAdmin={isSuperAdmin} userName={member.name}>
         {children}
       </AdminContentShell>

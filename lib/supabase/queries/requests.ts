@@ -201,6 +201,65 @@ export async function getKpiForAdmin(): Promise<AdminKpi> {
   }
 }
 
+// ─── 대시보드 차트 데이터 ────────────────────────────────────────────────
+
+export async function getAdminChartData() {
+  const supabase = await createClient()
+
+  // 상태별 건수
+  const { data: statusData, error: statusError } = await supabase
+    .from('ippp_requests')
+    .select('status')
+
+  if (statusError) throw statusError
+
+  const statusCounts: Record<string, number> = { draft: 0, in_progress: 0, hold: 0, completed: 0 }
+  ;(statusData ?? []).forEach((r) => {
+    statusCounts[r.status] = (statusCounts[r.status] ?? 0) + 1
+  })
+
+  // 월별 완료 추이 (최근 6개월)
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5)
+  sixMonthsAgo.setDate(1)
+
+  const { data: monthlyData, error: monthlyError } = await supabase
+    .from('ippp_requests')
+    .select('archive_at')
+    .eq('status', 'completed')
+    .gte('archive_at', sixMonthsAgo.toISOString())
+
+  if (monthlyError) throw monthlyError
+
+  const monthMap = new Map<string, number>()
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date()
+    d.setMonth(d.getMonth() - i)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    monthMap.set(key, 0)
+  }
+  ;(monthlyData ?? []).forEach((r) => {
+    if (!r.archive_at) return
+    const d = new Date(r.archive_at)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (monthMap.has(key)) monthMap.set(key, (monthMap.get(key) ?? 0) + 1)
+  })
+
+  return {
+    statusCounts: [
+      { status: 'draft', label: '초안', count: statusCounts.draft },
+      { status: 'in_progress', label: '진행중', count: statusCounts.in_progress },
+      { status: 'hold', label: '보류', count: statusCounts.hold },
+      { status: 'completed', label: '완료', count: statusCounts.completed },
+    ],
+    monthlyCompletion: Array.from(monthMap.entries()).map(([month, count]) => ({
+      month,
+      label: `${parseInt(month.slice(5))}월`,
+      count,
+    })),
+  }
+}
+
 // ─── 기관 KPI ───────────────────────────────────────────────────────────
 
 export async function getKpiForAgency(agencyId: string): Promise<AgencyKpi> {

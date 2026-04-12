@@ -44,15 +44,20 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200) return response
-        // _next/static 자산만 추가 캐싱
-        if (url.pathname.startsWith('/_next/static/')) {
-          const clone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
-        }
-        return response
-      })
+      return fetch(event.request)
+        .then((response) => {
+          if (!response || response.status !== 200) return response
+          // _next/static 자산만 추가 캐싱
+          if (url.pathname.startsWith('/_next/static/')) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return response
+        })
+        .catch(() => {
+          // 네트워크 오류 시 빈 응답 반환 (unhandled rejection 방지)
+          return new Response('', { status: 503, statusText: 'Service Unavailable' })
+        })
     })
   )
 })

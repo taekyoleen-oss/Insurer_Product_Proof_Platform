@@ -4,19 +4,22 @@ import {
   getActiveRequestsForPopup,
   getDueSoonRequestsForPopup,
   getCompletedThisMonthForPopup,
+  getAdminChartData,
 } from '@/lib/supabase/queries/requests'
 import { RequestCard } from '@/components/requests/RequestCard'
 import { DashboardKPICards } from '@/components/dashboard/DashboardKPICards'
 import { AgencyActiveList } from '@/components/dashboard/AgencyActiveList'
+import { DashboardChartsWrapper } from '@/components/dashboard/DashboardChartsWrapper'
 
 export default async function AdminDashboardPage() {
-  const [kpi, recentRequests, activeRequests, dueSoonRequests, completedThisMonth] =
+  const [kpi, recentRequests, activeRequests, dueSoonRequests, completedThisMonth, chartData] =
     await Promise.all([
       getKpiForAdmin(),
       getRequestsForAdmin({ status: 'in_progress' }),
       getActiveRequestsForPopup(),
       getDueSoonRequestsForPopup(),
       getCompletedThisMonthForPopup(),
+      getAdminChartData(),
     ])
 
   return (
@@ -34,6 +37,14 @@ export default async function AdminDashboardPage() {
         completedThisMonth={completedThisMonth}
       />
 
+      {/* 차트 섹션 */}
+      <DashboardChartsWrapper
+        statusCounts={chartData.statusCounts}
+        monthlyCompletion={chartData.monthlyCompletion}
+        agencyActiveCounts={kpi.agencyActiveCounts}
+      />
+
+      {/* 최근 진행중 건 + 기관별 활성 목록 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 최근 진행중 건 */}
         <div className="lg:col-span-2 space-y-3">

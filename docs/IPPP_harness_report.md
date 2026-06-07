@@ -9,12 +9,29 @@
 |------|------|------|
 | TypeScript 타입체크 | `npx tsc --noEmit` | **통과** (오류 0) |
 | 순수 로직 회귀 테스트 | `npm run harness:logic` | **11/11 통과** |
-| 하네스 오케스트레이터 | `node harness/run.mjs` | **성공** (로직 통과 · DB 단계는 `.env.harness` 없어 건너뜀) |
 | 프로덕션 빌드 | `next build --no-lint` | **성공** (22개 라우트 컴파일, 타입 유효성 통과) |
+| **격리 DB 통합 (실 DB)** | `node harness/db/rls.mjs` | **5/5 통과** (2026-06-07, 운영 프로젝트 대상) |
 
-> 참고: 이 샌드박스에는 **Docker 가 없어** 로컬 Supabase(`supabase start`) 기동이 불가하여
-> DB 통합 하네스는 실행하지 못했다. 코드는 완성·커밋되어 있으며, 로컬/테스트 인스턴스에서 즉시 실행 가능하다.
-> 또한 ESLint 는 환경의 `eslint-plugin-jsx-a11y` 설치 손상으로 실행 불가(코드 변경과 무관) → 빌드는 `--no-lint` 로 검증.
+### 1.1 실제 DB 하네스 실행 결과 (2026-06-07)
+
+사용자가 `20260607000000_hardening.sql` 을 운영 Supabase에 적용한 뒤, 운영 프로젝트를 대상으로 실행.
+사전 read-only 점검으로 마이그레이션 반영 확인(`ippp_audit_logs`·`accepted_at` 존재) 후 통합 하네스 수행.
+
+```
+# IPPP DB 하네스 — 대상: https://amnzfscyvfisrbtyzrkx.supabase.co
+ok - createRequest: 배열 NOT NULL 빈배열 허용        (P0-2)
+ok - RLS: A기관은 B기관 건을 볼 수 없음               (격리)
+ok - RLS: A기관은 자기 진행건을 볼 수 있음
+ok - RLS: 기관은 draft 건을 볼 수 없음
+ok - P0-3: 비활성 관리자는 RLS 접근 불가             (is_active 강화 검증)
+# pass 5  fail 0
+```
+
+- 테스트 데이터(`harness+*@example.com`, `H-Agency*`, 테스트 건)는 실행 후 **전량 정리 → 잔존 0건** 확인.
+- 실행에 사용한 `harness/.env.harness`(운영 service_role 키 포함)는 실행 후 **삭제**. 재실행 시 재생성 필요.
+
+> 참고: 로컬 Supabase는 이 환경에 Docker가 없어 미사용. ESLint는 환경의 `eslint-plugin-jsx-a11y`
+> 설치 손상으로 실행 불가(코드 변경과 무관) → 빌드는 `--no-lint` 로 검증.
 
 ## 2. 발견 → 수정 → 테스트 매핑
 

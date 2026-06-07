@@ -137,6 +137,8 @@ async function seed() {
 
 // ─── 정리 ──────────────────────────────────────────────────────────────────
 async function cleanup() {
+  // 하네스가 만든 요청 전부 제거 (created_by = 테스트 사용자) — 추적 누락분까지 포함
+  for (const uId of made.users) if (uId) await svc.from('ippp_requests').delete().eq('created_by', uId)
   for (const id of made.requests) await svc.from('ippp_requests').delete().eq('id', id)
   for (const id of made.agencies) await svc.from('ippp_agencies').delete().eq('id', id)
   for (const id of made.users) if (id) await svc.auth.admin.deleteUser(id).catch(() => {})

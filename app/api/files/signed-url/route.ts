@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/service'
+import { parseRequestIdFromStoragePath } from '@/lib/domain/requests'
+import { writeAuditLog } from '@/lib/audit/log'
 
 // ─── 입력 스키마 ──────────────────────────────────────────────────────────
 
@@ -39,9 +41,7 @@ export async function POST(request: NextRequest) {
 
     // storage_path에서 request_id 추출하여 접근 권한 확인
     // 경로 패턴: agencies/{agency_id}/requests/{request_id}/{filename}
-    const pathParts = storage_path.split('/')
-    const requestsIndex = pathParts.indexOf('requests')
-    const requestId = requestsIndex !== -1 ? pathParts[requestsIndex + 1] : null
+    const requestId = parseRequestIdFromStoragePath(storage_path)
 
     if (requestId) {
       // RLS를 통해 접근 권한 확인 (현재 사용자의 supabase 클라이언트 사용)
@@ -71,6 +71,15 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    await writeAuditLog({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: 'file_download',
+      entityType: 'file',
+      requestId,
+      metadata: { storage_path },
+    })
 
     return NextResponse.json({ url: data.signedUrl })
   } catch (err) {

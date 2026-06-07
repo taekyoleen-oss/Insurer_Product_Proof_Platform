@@ -38,7 +38,18 @@ export default async function AdminRequestDetailPage({
     .eq('user_id', user.id)
     .single()
 
-  const hasFile = files.length > 0
+  // P1-1: 완료 가능 여부 = 기관(외부) 업로더의 미삭제 파일 1개 이상
+  const liveUploaderIds = [
+    ...new Set(files.filter((f) => !f.deleted_at).map((f) => f.uploader_id)),
+  ]
+  let hasAgencyFile = false
+  if (liveUploaderIds.length > 0) {
+    const { data: agencyUploaders } = await supabase
+      .from('ippp_agency_members')
+      .select('user_id')
+      .in('user_id', liveUploaderIds)
+    hasAgencyFile = !!agencyUploaders && agencyUploaders.length > 0
+  }
 
   return (
     <div className="space-y-5">
@@ -72,7 +83,7 @@ export default async function AdminRequestDetailPage({
         <RequestStatusActions
           requestId={request.id}
           currentStatus={request.status}
-          hasFile={hasFile}
+          hasFile={hasAgencyFile}
         />
       </div>
 

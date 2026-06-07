@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { buildStoragePath } from '@/lib/domain/requests'
+import { writeAuditLog } from '@/lib/audit/log'
 
 // ─── 공통: 인증된 사용자 ─────────────────────────────────────────────────
 
@@ -47,11 +49,7 @@ export async function uploadFileAction(formData: FormData) {
   if (versionError && versionError.code !== 'PGRST116') throw versionError
 
   const version = (existing?.version ?? 0) + 1
-  const basePath = `agencies/${agencyId}/requests/${requestId}`
-  const storagePath =
-    version > 1
-      ? `${basePath}/v${version}_${file.name}`
-      : `${basePath}/${file.name}`
+  const storagePath = buildStoragePath(agencyId, requestId, file.name, version)
 
   // Supabase Storage 업로드
   const { error: uploadError } = await supabase.storage
@@ -76,6 +74,16 @@ export async function uploadFileAction(formData: FormData) {
     .single()
 
   if (insertError) throw insertError
+
+  await writeAuditLog({
+    actorId: user.id,
+    actorEmail: user.email,
+    action: 'file_upload',
+    entityType: 'file',
+    entityId: fileRecord.id,
+    requestId,
+    metadata: { filename: file.name, version, size: file.size },
+  })
 
   revalidatePath(`/dashboard/requests/${requestId}`)
   revalidatePath(`/portal/requests/${requestId}`)

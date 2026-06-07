@@ -36,7 +36,7 @@ export function RequestStatusActions({
 
   const handleComplete = () => {
     if (!hasFile) {
-      setError('완료 처리 전 파일을 업로드해야 합니다.')
+      setError('완료 처리 전 검증기관이 업로드한 검증확인서가 필요합니다.')
       return
     }
     if (!confirm('검증 건을 완료 처리하시겠습니까? 아카이브에 등록됩니다.')) return
@@ -86,7 +86,7 @@ export function RequestStatusActions({
               disabled={isPending || !hasFile}
               size="sm"
               className={hasFile ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
-              title={!hasFile ? '파일 업로드 후 완료 처리 가능' : '완료 처리'}
+              title={!hasFile ? '검증기관의 검증확인서 업로드 후 완료 처리 가능' : '완료 처리'}
             >
               <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
               완료 처리

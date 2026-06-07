@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,21 +28,22 @@ function InvitePageContent() {
 
   useEffect(() => {
     if (!token) { setLoading(false); return }
-    const supabase = createClient()
-    supabase
-      .from('ippp_invitations')
-      .select('id, email, role, agency_id, expires_at')
-      .eq('token', token)
-      .is('accepted_at', null)
-      .single()
-      .then(({ data, error: err }) => {
-        if (err || !data) {
-          setError('유효하지 않은 초대 링크입니다.')
-        } else if (new Date(data.expires_at) < new Date()) {
-          setError('초대 링크가 만료되었습니다. 관리자에게 재초대를 요청하세요.')
+    fetch(`/api/invitations/accept?token=${encodeURIComponent(token)}`)
+      .then(async (res) => {
+        const data = (await res.json().catch(() => ({}))) as
+          | (InvitationData & { error?: never })
+          | { error: string }
+        if (!res.ok || 'error' in data) {
+          setError(
+            ('error' in data && data.error) || '유효하지 않은 초대 링크입니다.'
+          )
         } else {
           setInvitation(data as InvitationData)
         }
+        setLoading(false)
+      })
+      .catch(() => {
+        setError('초대 링크 확인 중 오류가 발생했습니다.')
         setLoading(false)
       })
   }, [token])
@@ -66,44 +66,21 @@ function InvitePageContent() {
       return
     }
 
+    if (!token) return
+
     startTransition(async () => {
-      const supabase = createClient()
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: invitation.email,
-        password,
-        options: { data: { name } },
+      // P0-4: 권한 테이블 INSERT는 서버(service_role)에서 처리한다.
+      const res = await fetch('/api/invitations/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, name, password }),
       })
 
-      if (signUpError || !authData.user) {
-        setError(signUpError?.message ?? '회원가입에 실패했습니다.')
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        setError(data.error ?? '가입에 실패했습니다.')
         return
       }
-
-      const userId = authData.user.id
-      const isAgency = invitation.role === 'agency_admin' || invitation.role === 'agency_member'
-
-      if (isAgency && invitation.agency_id) {
-        await supabase.from('ippp_agency_members').insert({
-          user_id: userId,
-          agency_id: invitation.agency_id,
-          name,
-          email: invitation.email,
-          agency_role: invitation.role,
-        })
-      } else {
-        await supabase.from('ippp_internal_members').insert({
-          user_id: userId,
-          name,
-          email: invitation.email,
-          internal_role: invitation.role,
-        })
-      }
-
-      // 토큰 사용 처리
-      await supabase
-        .from('ippp_invitations')
-        .update({ accepted_at: new Date().toISOString() })
-        .eq('id', invitation.id)
 
       setDone(true)
       setTimeout(() => router.push('/'), 2000)

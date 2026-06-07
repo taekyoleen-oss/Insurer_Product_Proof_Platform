@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { RequestStatus, RequestType } from '@/types'
+import { canTransition } from '@/lib/domain/requests'
+import { writeAuditLog } from '@/lib/audit/log'
 
 // ─── 공통: 현재 사용자 내부 역할 조회 ──────────────────────────────────────
 
@@ -56,8 +58,9 @@ export async function createRequest(data: CreateRequestData) {
       title: data.title,
       description: data.description ?? null,
       agency_id: data.agency_id,
-      assigned_member_ids: data.assigned_member_ids ?? null,
-      hazard_type: data.hazard_type ?? null,
+      // 배열 컬럼은 NOT NULL — 빈 배열로 보정 (P0-2)
+      assigned_member_ids: data.assigned_member_ids ?? [],
+      hazard_type: data.hazard_type ?? [],
       product_type: data.product_type ?? null,
       due_date: data.due_date ?? null,
       fiscal_year: data.fiscal_year ?? null,
@@ -77,17 +80,10 @@ export async function createRequest(data: CreateRequestData) {
 }
 
 // ─── 상태 전이 (§5.2 권한 검증) ───────────────────────────────────────
-
-// 허용된 상태 전이 맵 (admin 이상만 가능)
-const ALLOWED_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
-  draft: ['in_progress'],
-  in_progress: ['hold', 'completed'],
-  hold: ['in_progress'],
-  completed: [],
-}
+// 허용 전이 맵은 lib/domain/requests.ts(canTransition)로 추출 — 앱·하네스 공유.
 
 export async function updateRequestStatus(id: string, newStatus: RequestStatus) {
-  const { supabase } = await requireAdmin()
+  const { supabase, user } = await requireAdmin()
 
   // 현재 상태 조회
   const { data: current, error: fetchError } = await supabase
@@ -99,9 +95,8 @@ export async function updateRequestStatus(id: string, newStatus: RequestStatus) 
   if (fetchError || !current) throw new Error('검증 건을 찾을 수 없습니다.')
 
   const currentStatus = current.status as RequestStatus
-  const allowed = ALLOWED_TRANSITIONS[currentStatus]
 
-  if (!allowed.includes(newStatus)) {
+  if (!canTransition(currentStatus, newStatus)) {
     throw new Error(
       `'${currentStatus}' 상태에서 '${newStatus}'로 전환할 수 없습니다.`
     )
@@ -122,6 +117,16 @@ export async function updateRequestStatus(id: string, newStatus: RequestStatus) 
 
   if (error) throw error
 
+  await writeAuditLog({
+    actorId: user.id,
+    actorEmail: user.email,
+    action: 'status_change',
+    entityType: 'request',
+    entityId: id,
+    requestId: id,
+    metadata: { from: currentStatus, to: newStatus },
+  })
+
   revalidatePath(`/dashboard/requests/${id}`)
   revalidatePath('/dashboard/requests')
   revalidatePath('/dashboard')
@@ -129,10 +134,10 @@ export async function updateRequestStatus(id: string, newStatus: RequestStatus) 
   return updated
 }
 
-// ─── 완료 처리 (admin만, 확인서 업로드 확인 후 completed + archive_at) ────
+// ─── 완료 처리 (admin만, 기관 검증확인서 확인 후 completed + archive_at) ────
 
 export async function completeRequest(id: string) {
-  const { supabase } = await requireAdmin()
+  const { supabase, user } = await requireAdmin()
 
   // 현재 상태 확인
   const { data: current, error: fetchError } = await supabase
@@ -146,16 +151,32 @@ export async function completeRequest(id: string) {
     throw new Error('진행 중인 건만 완료 처리할 수 있습니다.')
   }
 
-  // 검증확인서 파일 업로드 여부 확인 (파일이 하나 이상 있어야 완료 가능)
-  const { count: fileCount, error: fileError } = await supabase
+  // P1-1: 2단계 완료 통제 — 기관(외부) 업로더의 미삭제 파일이 1개 이상이어야 완료 가능.
+  //   admin 본인이 올린 파일만으로는 완료 불가(독립 검증확인서 통제).
+  const { data: liveFiles, error: fileError } = await supabase
     .from('ippp_files')
-    .select('*', { count: 'exact', head: true })
+    .select('uploader_id')
     .eq('request_id', id)
     .is('deleted_at', null)
 
   if (fileError) throw fileError
-  if (!fileCount || fileCount === 0) {
+  if (!liveFiles || liveFiles.length === 0) {
     throw new Error('완료 처리 전 최소 1개의 파일이 업로드되어야 합니다.')
+  }
+
+  const uploaderIds = [
+    ...new Set(liveFiles.map((f) => f.uploader_id).filter(Boolean) as string[]),
+  ]
+  const { data: agencyUploaders, error: auError } = await supabase
+    .from('ippp_agency_members')
+    .select('user_id')
+    .in('user_id', uploaderIds)
+
+  if (auError) throw auError
+  if (!agencyUploaders || agencyUploaders.length === 0) {
+    throw new Error(
+      '완료 처리 전 검증기관이 업로드한 검증확인서가 1개 이상 필요합니다.'
+    )
   }
 
   const { data: updated, error } = await supabase
@@ -170,6 +191,15 @@ export async function completeRequest(id: string) {
 
   if (error) throw error
 
+  await writeAuditLog({
+    actorId: user.id,
+    actorEmail: user.email,
+    action: 'request_complete',
+    entityType: 'request',
+    entityId: id,
+    requestId: id,
+  })
+
   revalidatePath(`/dashboard/requests/${id}`)
   revalidatePath('/dashboard/requests')
   revalidatePath('/dashboard/archive')
@@ -181,16 +211,27 @@ export async function completeRequest(id: string) {
 // ─── 기관 재배정 ───────────────────────────────────────────────────────
 
 export async function assignAgency(requestId: string, agencyId: string) {
-  const { supabase } = await requireAdmin()
+  const { supabase, user } = await requireAdmin()
 
   const { data: updated, error } = await supabase
     .from('ippp_requests')
-    .update({ agency_id: agencyId, assigned_member_ids: null })
+    // 알림 대상 초기화는 빈 배열로 (NOT NULL 컬럼, P1-3)
+    .update({ agency_id: agencyId, assigned_member_ids: [] })
     .eq('id', requestId)
     .select()
     .single()
 
   if (error) throw error
+
+  await writeAuditLog({
+    actorId: user.id,
+    actorEmail: user.email,
+    action: 'agency_reassign',
+    entityType: 'request',
+    entityId: requestId,
+    requestId,
+    metadata: { agency_id: agencyId },
+  })
 
   revalidatePath(`/dashboard/requests/${requestId}`)
   revalidatePath('/dashboard/requests')

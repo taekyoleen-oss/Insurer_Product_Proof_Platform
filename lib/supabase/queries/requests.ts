@@ -1,4 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import {
+  resolvePeriodRange,
+  dueSoonWindow,
+  averageDays,
+  completionRate,
+} from '@/lib/domain/requests'
 import type {
   RequestFilters,
   ArchiveFilters,
@@ -60,10 +66,7 @@ export async function getActiveRequestsForPopup(): Promise<RequestWithAgency[]> 
 export async function getDueSoonRequestsForPopup(): Promise<RequestWithAgency[]> {
   const supabase = await createClient()
 
-  const today = new Date().toISOString().split('T')[0]
-  const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0]
+  const { today, until: sevenDaysLater } = dueSoonWindow(new Date())
 
   const { data, error } = await supabase
     .from('ippp_requests')
@@ -154,10 +157,7 @@ export async function getKpiForAdmin(): Promise<AdminKpi> {
   if (completedError) throw completedError
 
   // D-7 마감 임박 건수 (오늘 이후 7일 이내 due_date, 완료 제외)
-  const today = new Date().toISOString().split('T')[0]
-  const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0]
+  const { today, until: sevenDaysLater } = dueSoonWindow(new Date())
 
   const { count: dueSoonCount, error: dueSoonError } = await supabase
     .from('ippp_requests')
@@ -275,10 +275,7 @@ export async function getKpiForAgency(agencyId: string): Promise<AgencyKpi> {
   if (activeError) throw activeError
 
   // D-7 마감 임박
-  const today = new Date().toISOString().split('T')[0]
-  const sevenDaysLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0]
+  const { today, until: sevenDaysLater } = dueSoonWindow(new Date())
 
   const { count: dueSoonCount, error: dueSoonError } = await supabase
     .from('ippp_requests')
@@ -339,51 +336,8 @@ export async function getArchive(filters: ArchiveFilters = {}): Promise<RequestW
   return (data ?? []) as unknown as RequestWithAgency[]
 }
 
-// ─── 기간 범위 계산 헬퍼 ──────────────────────────────────────────────
-
-function resolvePeriodRange(period: ReportPeriod): { start: string; end: string } {
-  const now = new Date()
-
-  if (period.type === 'custom') {
-    if (!period.start || !period.end) {
-      throw new Error('custom 기간 타입에는 start, end가 필요합니다.')
-    }
-    return { start: period.start, end: period.end }
-  }
-
-  if (period.type === 'last12months') {
-    const end = now.toISOString()
-    const start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString()
-    return { start, end }
-  }
-
-  if (period.type === 'year') {
-    const start = new Date(now.getFullYear(), 0, 1).toISOString()
-    const end = now.toISOString()
-    return { start, end }
-  }
-
-  if (period.type === 'half') {
-    const halfStart = now.getMonth() < 6 ? 0 : 6
-    const start = new Date(now.getFullYear(), halfStart, 1).toISOString()
-    const end = now.toISOString()
-    return { start, end }
-  }
-
-  if (period.type === 'quarter') {
-    const quarterStart = Math.floor(now.getMonth() / 3) * 3
-    const start = new Date(now.getFullYear(), quarterStart, 1).toISOString()
-    const end = now.toISOString()
-    return { start, end }
-  }
-
-  // month
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const end = now.toISOString()
-  return { start, end }
-}
-
 // ─── 관리자 리포트 (기관별 집계) ──────────────────────────────────────
+// 기간 범위 계산은 lib/domain/requests.ts(resolvePeriodRange)로 추출 — 앱·하네스 공유.
 
 export async function getReportForAdmin(period: ReportPeriod): Promise<AgencyReportRow[]> {
   const supabase = await createClient()
@@ -398,57 +352,40 @@ export async function getReportForAdmin(period: ReportPeriod): Promise<AgencyRep
 
   if (error) throw error
 
-  // 기관별 집계
-  const agencyMap = new Map<
-    string,
-    { agency_name: string; total: number; completed: number; totalDays: number; completedWithDays: number }
-  >()
+  type Row = {
+    agency_id: string
+    status: string
+    in_progress_at: string | null
+    archive_at: string | null
+    agency: { id: string; name: string } | null
+  }
+
+  // 기관별 원시 행 그룹화 → 집계는 도메인 헬퍼(averageDays/completionRate)로 계산
+  const agencyMap = new Map<string, { agency_name: string; rows: Row[] }>()
 
   ;(data ?? []).forEach((row: unknown) => {
-    const r = row as {
-      agency_id: string
-      status: string
-      in_progress_at: string | null
-      archive_at: string | null
-      agency: { id: string; name: string } | null
-    }
-
+    const r = row as Row
     if (!r.agency_id) return
-    const existing = agencyMap.get(r.agency_id)
-    const entry = existing ?? {
+    const entry = agencyMap.get(r.agency_id) ?? {
       agency_name: r.agency?.name ?? '알 수 없음',
-      total: 0,
-      completed: 0,
-      totalDays: 0,
-      completedWithDays: 0,
+      rows: [],
     }
-
-    entry.total++
-    if (r.status === 'completed' && r.in_progress_at && r.archive_at) {
-      entry.completed++
-      const days =
-        (new Date(r.archive_at).getTime() - new Date(r.in_progress_at).getTime()) /
-        (1000 * 60 * 60 * 24)
-      entry.totalDays += days
-      entry.completedWithDays++
-    } else if (r.status === 'completed') {
-      entry.completed++
-    }
-
+    entry.rows.push(r)
     agencyMap.set(r.agency_id, entry)
   })
 
-  return Array.from(agencyMap.entries()).map(([agency_id, entry]) => ({
-    agency_id,
-    agency_name: entry.agency_name,
-    total: entry.total,
-    completed: entry.completed,
-    completionRate: entry.total > 0 ? Math.round((entry.completed / entry.total) * 100) : 0,
-    avgDays:
-      entry.completedWithDays > 0
-        ? Math.round(entry.totalDays / entry.completedWithDays)
-        : null,
-  }))
+  return Array.from(agencyMap.entries()).map(([agency_id, entry]) => {
+    const total = entry.rows.length
+    const completed = entry.rows.filter((r) => r.status === 'completed').length
+    return {
+      agency_id,
+      agency_name: entry.agency_name,
+      total,
+      completed,
+      completionRate: completionRate(total, completed),
+      avgDays: averageDays(entry.rows),
+    }
+  })
 }
 
 // ─── 기관 자신 리포트 ─────────────────────────────────────────────────
@@ -472,26 +409,12 @@ export async function getReportForAgency(
 
   const rows = data ?? []
   const completed = rows.filter((r) => r.status === 'completed')
-  const completedWithDays = completed.filter(
-    (r) => r.in_progress_at && r.archive_at
-  )
-  const totalDays = completedWithDays.reduce((acc, r) => {
-    return (
-      acc +
-      (new Date(r.archive_at!).getTime() - new Date(r.in_progress_at!).getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-  }, 0)
 
   return {
     total: rows.length,
     completed: completed.length,
-    completionRate:
-      rows.length > 0 ? Math.round((completed.length / rows.length) * 100) : 0,
-    avgDays:
-      completedWithDays.length > 0
-        ? Math.round(totalDays / completedWithDays.length)
-        : null,
+    completionRate: completionRate(rows.length, completed.length),
+    avgDays: averageDays(rows),
     requests: rows.map((r) => ({
       id: r.id,
       title: r.title,
